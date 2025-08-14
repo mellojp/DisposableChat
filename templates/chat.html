@@ -9,7 +9,7 @@
     <script>
         window.salaId = "{{ sala_id }}";
     </script>
-    </head>
+</head>
 <body>
 
     <div class="chat-container">
@@ -33,11 +33,14 @@
 
         <main class="chat-panel">
             <header class="chat-header">
+                <button id="menu-toggle-btn" class="menu-toggle">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
                 <h3>Disposable Chat Room: {{ sala_id }}</h3>
             </header>
 
             <div id="messages-area" class="messages-area">
-                </div>
+            </div>
 
             <form id="message-form" class="chat-input-area">
                 <input id="message-input" type="text" class="message-input" placeholder="Digite sua mensagem..." autocomplete="off">

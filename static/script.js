@@ -9,6 +9,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ESTADO DO CLIENTE ---
     const currentUser = sessionStorage.getItem('username') || "Anônimo";
 
+    const sidebar = document.querySelector('.sidebar');
+    const menuToggleBtn = document.getElementById('menu-toggle-btn');
+    const chatPanel = document.querySelector('.chat-panel');
+
+    if (menuToggleBtn && sidebar) {
+
+        menuToggleBtn.addEventListener('click', (event) => {
+            event.stopPropagation(); // Impede que o clique feche o menu imediatamente
+            sidebar.classList.toggle('visible');
+        });
+
+        // 2. Fecha a sidebar se o usuário clicar na área do chat (fora do menu)
+        chatPanel.addEventListener('click', () => {
+            if (sidebar.classList.contains('visible')) {
+                sidebar.classList.remove('visible');
+            }
+        });
+    }
+
     // --- LÓGICA PARA SAIR DA SALA ---
     if (leaveRoomBtn) {
         leaveRoomBtn.addEventListener('click', () => {

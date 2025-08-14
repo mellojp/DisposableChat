@@ -25,7 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Evita criar múltiplas conexões se a página disparar DOMContentLoaded mais de uma vez
     if (!window.chatSocket || window.chatSocket.readyState === WebSocket.CLOSED) {
-        const wsUrl = `ws://${window.location.host}/ws/${window.salaId}`;
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/${window.salaId}`;
+        
         window.chatSocket = new WebSocket(wsUrl);
     }
     const socket = window.chatSocket;

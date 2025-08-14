@@ -1,5 +1,6 @@
 import os
 import uuid
+import json # Importe a biblioteca JSON
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -17,8 +18,6 @@ templates = Jinja2Templates(directory="templates")
 class ConnectionManager:
     """Gerencia as conexões WebSocket ativas para cada sala."""
     def __init__(self):
-        # ANTES: self.active_connections: Dict[str, List[WebSocket]] = {}
-        # AGORA: Usamos os tipos nativos 'dict' e 'list'
         self.active_connections: dict[str, list[WebSocket]] = {}
 
     async def connect(self, websocket: WebSocket, room_id: str):
@@ -41,10 +40,15 @@ class ConnectionManager:
             for connection in self.active_connections[room_id]:
                 await connection.send_text(message)
 
+    async def broadcast_to_others(self, message: str, room_id: str, sender: WebSocket):
+        """Envia uma mensagem para todos, exceto para o remetente."""
+        if room_id in self.active_connections:
+            for connection in self.active_connections[room_id]:
+                if connection != sender:
+                    await connection.send_text(message)
+
 # Instância única do gerenciador e um set para as salas ativas
 manager = ConnectionManager()
-# ANTES: active_rooms: Set[str] = set()
-# AGORA: Usamos o tipo nativo 'set'
 active_rooms: set[str] = set()
 
 
@@ -78,6 +82,8 @@ async def get_chat_page(request: Request, sala_id: str):
 
 # --- Endpoint WebSocket ---
 
+# --- Endpoint WebSocket ---
+
 @app.websocket("/ws/{sala_id}")
 async def websocket_endpoint(websocket: WebSocket, sala_id: str):
     if sala_id not in active_rooms:
@@ -86,27 +92,48 @@ async def websocket_endpoint(websocket: WebSocket, sala_id: str):
 
     await manager.connect(websocket, sala_id)
     
-    username = "Anônimo" # Valor padrão
+    username = None # Começa como None
     try:
+        # A primeira mensagem DEVE ser um JSON com o nome de usuário
         initial_data = await websocket.receive_json()
-        username = initial_data.get("user", "Anônimo")
+        # Pega o nome de usuário, removendo espaços em branco no início/fim
+        username = initial_data.get("user", "").strip()
+
+        # Se o nome de usuário estiver vazio ou for nulo, rejeita a conexão
+        if not username:
+            print(f"Conexão rejeitada para sala {sala_id}: nome de usuário não fornecido.")
+            await websocket.close(code=1008) # Fecha a conexão
+            manager.disconnect(websocket, sala_id) # Remove do gerenciador
+            return
+
+        # Se o nome for válido, anuncia a entrada do usuário
         await manager.broadcast(f'{{"user": "Sistema", "message": "{username} entrou na sala."}}', sala_id)
         
+        # Continua o loop de mensagens normal
         while True:
-            data = await websocket.receive_text()
-            await manager.broadcast(data, sala_id)
+            data_str = await websocket.receive_text()
+            data = json.loads(data_str)
+            
+            if data.get("type") == "typing":
+                await manager.broadcast_to_others(data_str, sala_id, websocket)
+            else:
+                await manager.broadcast(data_str, sala_id)
+
     except WebSocketDisconnect:
-        is_room_empty = manager.disconnect(websocket, sala_id)
-        
-        await manager.broadcast(f'{{"user": "Sistema", "message": "{username} saiu da sala."}}', sala_id)
+        # Se o usuário nunca chegou a fornecer um nome válido, não há mensagem de saída a enviar
+        if username:
+            is_room_empty = manager.disconnect(websocket, sala_id)
+            await manager.broadcast(f'{{"user": "Sistema", "message": "{username} saiu da sala."}}', sala_id)
 
-        if is_room_empty:
-            if sala_id in active_rooms:
-                active_rooms.remove(sala_id)
-                print(f"Sala {sala_id} ficou vazia e foi excluída. Salas ativas: {active_rooms}")
-                if sala_id in manager.active_connections:
-                    del manager.active_connections[sala_id]
-
+            if is_room_empty:
+                if sala_id in active_rooms:
+                    active_rooms.remove(sala_id)
+                    print(f"Sala {sala_id} ficou vazia e foi excluída. Salas ativas: {active_rooms}")
+                    if sala_id in manager.active_connections:
+                        del manager.active_connections[sala_id]
+        else:
+            # Apenas desconecta se o usuário saiu antes de se identificar
+            manager.disconnect(websocket, sala_id)
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))

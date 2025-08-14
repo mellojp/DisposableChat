@@ -4,23 +4,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const messagesArea = document.getElementById('messages-area');
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
-    const leaveRoomBtn = document.getElementById('leave-room-btn'); // Botão de sair
+    const leaveRoomBtn = document.getElementById('leave-room-btn');
+    const typingIndicator = document.getElementById('typing-indicator'); // Novo elemento
 
     // --- ESTADO DO CLIENTE ---
     const currentUser = sessionStorage.getItem('username') || "Anônimo";
+    if(currentUser == "Anônimo"){
+        if (window.chatSocket && window.chatSocket.readyState === WebSocket.OPEN) {
+            window.chatSocket.close();
+        }
+        sessionStorage.removeItem('username');
+        window.location.href = '/';
+    }
+    let typingTimer; // Timer para controlar o indicador
+    const TYPING_TIMER_LENGTH = 2000; // 2 segundos
 
     const sidebar = document.querySelector('.sidebar');
     const menuToggleBtn = document.getElementById('menu-toggle-btn');
     const chatPanel = document.querySelector('.chat-panel');
 
     if (menuToggleBtn && sidebar) {
-
         menuToggleBtn.addEventListener('click', (event) => {
-            event.stopPropagation(); // Impede que o clique feche o menu imediatamente
+            event.stopPropagation();
             sidebar.classList.toggle('visible');
         });
 
-        // 2. Fecha a sidebar se o usuário clicar na área do chat (fora do menu)
         chatPanel.addEventListener('click', () => {
             if (sidebar.classList.contains('visible')) {
                 sidebar.classList.remove('visible');
@@ -28,21 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- LÓGICA PARA SAIR DA SALA ---
     if (leaveRoomBtn) {
         leaveRoomBtn.addEventListener('click', () => {
-            // Fecha a conexão do WebSocket se estiver aberta
             if (window.chatSocket && window.chatSocket.readyState === WebSocket.OPEN) {
                 window.chatSocket.close();
             }
-            // Limpa o nome de usuário armazenado
             sessionStorage.removeItem('username');
-            // Redireciona o usuário para a página inicial
             window.location.href = '/';
         });
     }
 
-    // Evita criar múltiplas conexões se a página disparar DOMContentLoaded mais de uma vez
     if (!window.chatSocket || window.chatSocket.readyState === WebSocket.CLOSED) {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${wsProtocol}//${window.location.host}/ws/${window.salaId}`;
@@ -59,17 +62,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         messageDiv.className = `message ${messageType}`;
         if (isSystemMessage) {
-            messageDiv.classList.add('system'); // Classe extra para sistema
+            messageDiv.classList.add('system');
         }
 
         const messagePrefix = (messageType === 'received' && !isSystemMessage) ? `${user}: ` : '';
         messageDiv.textContent = `${messagePrefix}${message}`;
 
-        messagesArea.appendChild(messageDiv);
+        // Insere a mensagem antes do indicador de digitação
+        messagesArea.insertBefore(messageDiv, typingIndicator);
         messagesArea.scrollTop = messagesArea.scrollHeight;
     }
 
-    // --- GERENCIAMENTO DA CONEXÃO WEBSOCKET ---
     socket.onopen = () => {
         console.log("Conexão estabelecida!");
         socket.send(JSON.stringify({ user: currentUser, message: "" }));
@@ -77,15 +80,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
+
+        // Novo: Trata o evento de 'typing'
+        if (data.type === 'typing' && data.user !== currentUser) {
+            typingIndicator.textContent = `${data.user} está digitando...`;
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                typingIndicator.textContent = '';
+            }, TYPING_TIMER_LENGTH);
+            return;
+        }
+
         if (data.user === currentUser && data.message) {
             return;
+        }
+        
+        // Limpa o indicador quando uma mensagem chega
+        if (data.user !== currentUser) {
+            typingIndicator.textContent = '';
+            clearTimeout(typingTimer);
         }
         addMessage(data);
     };
 
     socket.onclose = () => {
         console.log("Conexão fechada.");
-        // Apenas adiciona a mensagem se o usuário ainda estiver na página de chat.
         if (document.getElementById('messages-area')) {
              addMessage({ user: 'Sistema', message: 'Você foi desconectado. Por favor volte ao início.' });
         }
@@ -96,18 +115,26 @@ document.addEventListener('DOMContentLoaded', () => {
         addMessage({ user: 'Sistema', message: 'Ocorreu um erro de conexão.' });
     };
 
-    // --- ENVIO DE MENSAGENS ---
     messageForm.addEventListener('submit', (event) => {
         event.preventDefault();
         const messageText = messageInput.value.trim();
 
         if (messageText && socket.readyState === WebSocket.OPEN) {
-            addMessage({ user: currentUser, message: messageText });
-            socket.send(JSON.stringify({
+            const messageData = {
+                type: 'chat', // Define o tipo como 'chat'
                 user: currentUser,
                 message: messageText
-            }));
+            };
+            addMessage(messageData); // Adiciona a mensagem localmente
+            socket.send(JSON.stringify(messageData)); // Envia para o servidor
             messageInput.value = '';
+        }
+    });
+
+    // Novo: Event listener para o campo de input
+    messageInput.addEventListener('input', () => {
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: 'typing', user: currentUser }));
         }
     });
 });

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat - {{ sala_id }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/main.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script>
         window.salaId = "{{ sala_id }}";
@@ -40,6 +40,7 @@
             </header>
 
             <div id="messages-area" class="messages-area">
+                <div id="typing-indicator" class="typing-indicator"></div>
             </div>
 
             <form id="message-form" class="chat-input-area">

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - {{ sala_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script>
+        window.salaId = "{{ sala_id }}";
+    </script>
+    </head>
+<body>
+
+    <div class="chat-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Salas</h2>
+                <button id="leave-room-btn" class="sidebar-action-btn" title="Sair da sala e voltar ao início">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+            <ul class="room-list">
+                <li class="room-item active">
+                    <div class="room-icon">#</div>
+                    <div class="room-details">
+                        <h3>Sala Atual</h3>
+                        <p>{{ sala_id }}</p>
+                    </div>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="chat-panel">
+            <header class="chat-header">
+                <h3>Disposable Chat Room: {{ sala_id }}</h3>
+            </header>
+
+            <div id="messages-area" class="messages-area">
+                </div>
+
+            <form id="message-form" class="chat-input-area">
+                <input id="message-input" type="text" class="message-input" placeholder="Digite sua mensagem..." autocomplete="off">
+                <button type="submit" class="send-btn">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </form>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html>

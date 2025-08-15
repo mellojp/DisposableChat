@@ -1,10 +1,8 @@
-/* --- Estilos Específicos para a Página de Chat --- */
 .chat-container {
     display: flex;
     height: 100vh;
 }
 
-/* Sidebar (Lista de Salas) */
 .sidebar {
     width: 360px;
     background-color: var(--container-bg-color);
@@ -109,13 +107,12 @@
     background-color: var(--border-color);
 }
 
-/* Painel Principal do Chat */
 .chat-panel {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
     background-color: var(--background-color);
-    height: 100vh; /* Mantém altura total */
+    height: 100vh;
 }
 
 .chat-header {
@@ -229,16 +226,26 @@
     right: 0;
 }
 
-/* Botão de menu para mobile */
 .menu-toggle {
-    display: none; /* Escondido por padrão em telas grandes */
+    display: none; 
 }
 
-/* Indicador de digitação */
 .typing-indicator {
     padding: 0.5rem 1rem;
     font-style: italic;
     color: var(--text-color-light);
-    height: 1.2rem; /* Reserva espaço para evitar pulos no layout */
+    height: 1.2rem; 
     transition: opacity 0.3s ease;
+}
+
+.message.system {
+    align-self: center;       
+    text-align: center;        
+    max-width: fit-content;    
+    background-color: rgba(255, 255, 255, 0.85); 
+    border-radius: 0.75rem;    
+    padding: 0.5rem 1rem;      
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); 
+    color: var(--text-color);  
+    font-size: 0.875rem;       
 }

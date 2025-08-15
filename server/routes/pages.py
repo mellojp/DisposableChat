@@ -8,7 +8,7 @@ from .api import active_rooms
 router = APIRouter()
 
 # Configura o diretório de templates para este roteador
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="client/templates")
 
 @router.get("/", response_class=HTMLResponse, tags=["Pages"])
 async def get_landing_page(request: Request):

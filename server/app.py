@@ -6,7 +6,7 @@ from .routes import api, pages
 app = FastAPI(title="Disposable Chat")
 
 # Monta o diretório 'static' para servir CSS, JS, etc.
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="client/static"), name="static")
 
 # Inclui os roteadores na aplicação principal
 app.include_router(pages.router)

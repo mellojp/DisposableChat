@@ -26,5 +26,5 @@ class RoomManager:
             self.active_rooms.remove(room_id)
             print(f"Sala {room_id} foi removida.")
 
-# Instância única (Singleton) para ser usada em toda a aplicação
+
 room_manager = RoomManager()

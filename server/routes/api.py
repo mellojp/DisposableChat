@@ -39,6 +39,11 @@ async def create_room():
     print(f"Sala criada: {room_id}. Salas ativas: {active_rooms}")
     return {"room_id": room_id}
 
+@router.get("/rooms", tags=["API"])
+async def list_rooms():
+    """Lista todas as sala ativas"""
+    return {"rooms": list(active_rooms)}
+
 @router.get("/rooms/{room_id}", tags=["API"])
 async def get_room(room_id: str):
     """Verifica se uma sala de chat existe"""

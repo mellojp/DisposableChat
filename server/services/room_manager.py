@@ -1,5 +1,6 @@
 import uuid
 import asyncio
+from .message_manager import message_manager
 
 class RoomManager:
     def __init__(self):
@@ -24,7 +25,10 @@ class RoomManager:
             self.active_rooms.remove(room_id)
             if room_id in self.deletion_timers:
                 del self.deletion_timers[room_id]
-            print(f"room {room_id} was deleted.")
+            
+            # Remove mensagens da sala quando ela é deletada
+            message_manager.clear_room_messages(room_id)
+            print(f"Room {room_id} was deleted.")
 
     async def _delete_room_after_delay(self, room_id: str):
         await asyncio.sleep(self.ROOM_TTL_SECONDS)
@@ -40,6 +44,5 @@ class RoomManager:
         if room_id in self.deletion_timers:
             self.deletion_timers[room_id].cancel()
             del self.deletion_timers[room_id]
-
 
 room_manager = RoomManager()

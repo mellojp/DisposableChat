@@ -1,6 +1,5 @@
-// /client/static/js/views/chat.js
 document.addEventListener('DOMContentLoaded', async () => {
-    // --- ELEMENTOS DO DOM (UI) ---
+    // --- ELEMENTOS DO DOM ---
     const messagesArea = document.getElementById('messages-area');
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
@@ -14,38 +13,66 @@ document.addEventListener('DOMContentLoaded', async () => {
     const createNewRoomBtn = document.getElementById('create-new-room-btn');
 
     // --- ESTADO DA APLICAÇÃO ---
-    const currentUser = sessionStorage.getItem('username');
     const roomId = window.salaId;
+    let currentUser = '';
     let typingTimer;
-    let joinedRooms = [];
+    let userRooms = [];
 
-    // --- FUNÇÕES DE LÓGICA E RENDERIZAÇÃO ---
+    // --- VERIFICAÇÕES INICIAIS ---
+    if (!api.isAuthenticated()) {
+        window.location.href = '/';
+        return;
+    }
 
-    function handleLeaveRoom(roomToLeaveId) {
-        joinedRooms = joinedRooms.filter(id => id !== roomToLeaveId);
-        sessionStorage.setItem('joinedRooms', JSON.stringify(joinedRooms));
-        
-        let hasJoinedBefore = JSON.parse(sessionStorage.getItem('hasJoinedRooms')) || [];
-        hasJoinedBefore = hasJoinedBefore.filter(id => id !== roomToLeaveId);
-        sessionStorage.setItem('hasJoinedRooms', JSON.stringify(hasJoinedBefore));
+    try {
+        const session = await api.getCurrentSession();
+        currentUser = session.username;
+        userRooms = session.joined_rooms;
+    } catch (error) {
+        console.error('Erro ao obter sessão:', error);
+        window.location.href = '/';
+        return;
+    }
 
-        // Comportamento melhorado ao apagar a sala atual
-        if (roomToLeaveId === roomId) {
-            // Se houver outras salas, navega para a primeira da lista
-            if (joinedRooms.length > 0) {
-                window.location.href = `/sala/${joinedRooms[0]}`;
-            } else {
-                // Se for a última sala, vai para a página inicial
-                window.location.href = '/';
-            }
-        } else {
-            // Se apagou outra sala, apenas atualiza a lista na UI
-            renderRoomList(joinedRooms, roomId);
+    // Verifica se a sala existe
+    try {
+        const salaExiste = await api.verificarSeSalaExiste(roomId);
+        if (!salaExiste) {
+            alert('Sala não encontrada!');
+            window.location.href = '/';
+            return;
         }
+    } catch (error) {
+        console.error('Erro ao verificar sala:', error);
+        window.location.href = '/';
+        return;
+    }
+
+    // --- FUNÇÕES DE UI ---
+    function handleLeaveRoom(roomToLeaveId) {
+        api.leaveRoom(roomToLeaveId).then(() => {
+            // Remove da lista local
+            userRooms = userRooms.filter(id => id !== roomToLeaveId);
+            
+            if (roomToLeaveId === roomId) {
+                // Se saiu da sala atual
+                if (userRooms.length > 0) {
+                    window.location.href = `/sala/${userRooms[0]}`;
+                } else {
+                    window.location.href = '/';
+                }
+            } else {
+                // Apenas atualiza a lista
+                renderRoomList(userRooms, roomId);
+            }
+        }).catch(error => {
+            console.error('Erro ao sair da sala:', error);
+        });
     }
 
     function renderRoomList(rooms, currentRoomId) {
         if (!roomListElement) return;
+        
         roomListElement.innerHTML = '';
         rooms.forEach(id => {
             const item = document.createElement('li');
@@ -58,12 +85,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h3>Sala</h3>
                     <p>${id}</p>
                 </div>
-                <button class="delete-room-btn" title="Remover sala da lista">
+                <button class="delete-room-btn" title="Sair da sala">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             `;
 
-            // O `div` dos detalhes da sala é agora o alvo do clique para navegação
             const detailsDiv = item.querySelector('.room-details');
             detailsDiv.addEventListener('click', () => {
                 if (id !== currentRoomId) {
@@ -73,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const deleteBtn = item.querySelector('.delete-room-btn');
             deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Essencial para não disparar outros cliques
+                e.stopPropagation();
                 handleLeaveRoom(id);
             });
 
@@ -81,8 +107,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    function addMessage(data, save = true) {
-        const { type, user, message } = data;
+    function addMessage(data, fromHistory = false) {
+        const { type, user, message, timestamp } = data;
         const div = document.createElement('div');
 
         if (type === 'user_joined' || type === 'user_left') {
@@ -96,86 +122,125 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (div.className) {
+            // Se for do histórico, adiciona antes do indicador de digitação
+            // Se for nova mensagem, também adiciona antes do indicador
             messagesArea.insertBefore(div, typingIndicator);
-            messagesArea.scrollTop = messagesArea.scrollHeight;
+            
+            // Só faz scroll se não for do histórico ou se estiver perto do final
+            if (!fromHistory || messagesArea.scrollTop > messagesArea.scrollHeight - messagesArea.clientHeight - 100) {
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            }
+        }
+    }
+
+    async function loadMessageHistory() {
+        try {
+            const response = await api.getRoomMessages(roomId, 50);
+            response.messages.forEach(msg => addMessage(msg, true));
+        } catch (error) {
+            console.error('Erro ao carregar histórico:', error);
+        }
+    }
+
+    // --- INICIALIZAÇÃO ---
+    
+    // Carrega histórico de mensagens
+    await loadMessageHistory();
+
+    // Atualiza lista de salas (garante que a sala atual esteja na lista)
+    try {
+        const roomsResponse = await api.getUserRooms();
+        userRooms = roomsResponse.rooms;
+        
+        // Se a sala atual não estiver na lista, adiciona
+        if (!userRooms.includes(roomId)) {
+            await api.joinRoom(roomId);
+            userRooms.push(roomId);
         }
         
-        if (save && (type === 'chat' || type === 'user_joined' || type === 'user_left')) {
-            messageStore.addMessage(roomId, data);
-        }
+        renderRoomList(userRooms, roomId);
+    } catch (error) {
+        console.error('Erro ao carregar salas:', error);
     }
 
-    function loadMessageHistory() {
-        const history = messageStore.getMessages(roomId);
-        history.forEach(msg => addMessage(msg, false));
-    }
-
-    // --- INICIALIZAÇÃO E EVENTOS ---
-    if (!currentUser || !roomId) {
-        sessionStorage.removeItem('username');
+    // Conecta WebSocket
+    try {
+        websocketService.connect(roomId);
+    } catch (error) {
+        console.error('Erro ao conectar WebSocket:', error);
+        alert('Erro de conexão. Redirecionando...');
         window.location.href = '/';
         return;
     }
 
-    joinedRooms = await api.synchronizeAndGetRooms(roomId);
-    renderRoomList(joinedRooms, roomId);
-
-    loadMessageHistory();
-
-    websocketService.connect(roomId, currentUser);
-
+    // --- EVENT LISTENERS DO WEBSOCKET ---
+    
     websocketService.on('chat', (data) => {
         if (data.user !== currentUser) {
-             typingIndicator.textContent = '';
-             clearTimeout(typingTimer);
-             addMessage(data);
+            typingIndicator.textContent = '';
+            clearTimeout(typingTimer);
         }
+        addMessage(data);
     });
 
     websocketService.on('user_joined', (data) => {
-        if (data.user !== currentUser) {
-            addMessage(data);
-            return;
-        }
-        let hasJoinedBefore = JSON.parse(sessionStorage.getItem('hasJoinedRooms')) || [];
-        if (!hasJoinedBefore.includes(roomId)) {
-            addMessage(data);
-            hasJoinedBefore.push(roomId);
-            sessionStorage.setItem('hasJoinedRooms', JSON.stringify(hasJoinedBefore));
-        }
+        addMessage(data);
     });
 
-    websocketService.on('user_left', addMessage);
+    websocketService.on('user_left', (data) => {
+        addMessage(data);
+    });
 
     websocketService.on('typing', (data) => {
         if (data.user !== currentUser) {
             typingIndicator.textContent = `${data.user} está a digitar...`;
             clearTimeout(typingTimer);
-            typingTimer = setTimeout(() => { typingIndicator.textContent = ''; }, 2000);
+            typingTimer = setTimeout(() => {
+                typingIndicator.textContent = '';
+            }, 2000);
         }
     });
 
-    websocketService.on('close', () => addMessage({ type: 'user_left', user: 'Sistema', message: 'Você foi desconectado.' }));
-    websocketService.on('error', () => addMessage({ type: 'user_left', user: 'Sistema', message: 'Ocorreu um erro de conexão.' }));
+    websocketService.on('close', () => {
+        addMessage({
+            type: 'system',
+            user: 'Sistema',
+            message: 'Você foi desconectado.'
+        });
+    });
 
+    websocketService.on('error', () => {
+        addMessage({
+            type: 'system',
+            user: 'Sistema',
+            message: 'Ocorreu um erro de conexão.'
+        });
+    });
+
+    // --- EVENT LISTENERS DA UI ---
+    
     messageForm.addEventListener('submit', (event) => {
         event.preventDefault();
         const messageText = messageInput.value.trim();
         if (messageText) {
-            const messageData = { type: 'chat', user: currentUser, message: messageText };
-            addMessage(messageData);
-            websocketService.sendMessage(messageData);
+            websocketService.sendMessage({
+                type: 'chat',
+                message: messageText
+            });
             messageInput.value = '';
         }
     });
 
     messageInput.addEventListener('input', () => {
-        websocketService.sendMessage({ type: 'typing', user: currentUser });
+        websocketService.sendMessage({
+            type: 'typing',
+            user: currentUser
+        });
     });
 
-    leaveRoomBtn.addEventListener('click', () => {
+    leaveRoomBtn.addEventListener('click', async () => {
         websocketService.close();
-        sessionStorage.removeItem('username');
+        await api.deleteSession();
         window.location.href = '/';
     });
     
@@ -184,6 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (newRoomId) {
             try {
                 if (await api.verificarSeSalaExiste(newRoomId)) {
+                    await api.joinRoom(newRoomId);
                     window.location.href = `/sala/${newRoomId}`;
                 } else {
                     alert('Erro: Sala não encontrada.');
@@ -193,21 +259,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('Não foi possível conectar ao servidor.');
             }
         }
+        newRoomIdInput.value = '';
     });
 
     createNewRoomBtn.addEventListener('click', async () => {
         try {
             const data = await api.criarNovaSala();
             window.location.href = `/sala/${data.room_id}`;
-        } catch(error) {
+        } catch (error) {
             console.error(error);
             alert('Não foi possível criar a sala.');
         }
     });
 
+    // Mobile menu toggle
     if (menuToggle && sidebar) {
-        menuToggle.addEventListener('click', () => sidebar.classList.toggle('visible'));
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('visible');
+        });
     }
+
+    // Close sidebar when clicking outside (mobile)
     const chatPanel = document.querySelector('.chat-panel');
     if (chatPanel && sidebar && menuToggle) {
         chatPanel.addEventListener('click', (event) => {
@@ -218,4 +290,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // Enter key support para inputs da sidebar
+    newRoomIdInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') joinNewRoomBtn.click();
+    });
+
+    // Cleanup ao sair da página
+    window.addEventListener('beforeunload', () => {
+        websocketService.close();
+    });
 });

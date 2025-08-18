@@ -21,14 +21,14 @@
                 </button>
             </div>
             <ul class="room-list">
-                <li class="room-item active">
-                    <div class="room-icon">#</div>
-                    <div class="room-details">
-                        <h3>Sala Atual</h3>
-                        <p>{{ sala_id }}</p>
-                    </div>
-                </li>
             </ul>
+
+            <div class="sidebar-actions">
+                <input type="text" id="new-room-id-input" class="input-field" placeholder="Código da sala">
+                <button id="join-new-room-btn" class="btn btn-sidebar">Entrar</button>
+                <div class="separator">ou</div>
+                <button id="create-new-room-btn" class="btn btn-sidebar">Criar nova sala</button>
+            </div>
         </aside>
 
         <main class="chat-panel">
@@ -51,7 +51,9 @@
             </form>
         </main>
     </div>
-
-    <script src="{{ url_for('static', path='/script.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/services/api.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/services/websocket.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/services/messageStorage.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/views/chat.js') }}"></script>
 </body>
 </html>

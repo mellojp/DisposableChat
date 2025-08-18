@@ -1,23 +1,27 @@
 const websocketService = {
     socket: null,
-    listeners: {}, // Objeto para armazenar os callbacks (ex: 'chat', 'user_joined')
+    listeners: {},
 
     /**
-     * Inicia a conexão WebSocket com o servidor.
+     * Inicia a conexão WebSocket com o servidor usando sessão.
      */
-    connect(roomId, username) {
+    connect(roomId) {
         if (this.socket) {
             this.socket.close();
         }
 
+        const token = api.getAuthToken();
+        if (!token) {
+            throw new Error('Token de sessão não encontrado');
+        }
+
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}/${username}`;
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}?session_id=${token}`;
         this.socket = new WebSocket(wsUrl);
 
         this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type && this.listeners[data.type]) {
-                // Chama o callback registrado para este tipo de evento
                 this.listeners[data.type].forEach(callback => callback(data));
             }
         };
@@ -47,6 +51,15 @@ const websocketService = {
     },
 
     /**
+     * Remove todos os listeners de um evento específico.
+     */
+    off(eventName) {
+        if (this.listeners[eventName]) {
+            delete this.listeners[eventName];
+        }
+    },
+
+    /**
      * Envia uma mensagem para o servidor.
      */
     sendMessage(payload) {
@@ -61,6 +74,9 @@ const websocketService = {
     close() {
         if (this.socket) {
             this.socket.close();
+            this.socket = null;
         }
+        // Limpa todos os listeners
+        this.listeners = {};
     }
 };

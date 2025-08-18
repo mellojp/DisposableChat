@@ -1,9 +1,8 @@
 import json
 from fastapi import WebSocket
-from .room_manager import room_manager 
+from .room_manager import room_manager
 
 class ConnectionManager:
-
     def __init__(self):
         self.active_connections: dict[str, list[WebSocket]] = {}
 
@@ -25,9 +24,15 @@ class ConnectionManager:
     
     async def broadcast(self, payload: dict, room_id: str):
         if room_id in self.active_connections:
-            message_str = json.dumps(payload)
+            message_str = json.dumps(payload, default=str)  # default=str para serializar datetime
             for connection in self.active_connections[room_id]:
-                await connection.send_text(message_str)
-
+                try:
+                    await connection.send_text(message_str)
+                except:
+                    # Remove conexões quebradas
+                    pass
+    
+    def get_room_user_count(self, room_id: str) -> int:
+        return len(self.active_connections.get(room_id, []))
 
 connection_manager = ConnectionManager()

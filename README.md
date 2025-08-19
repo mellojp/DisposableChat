@@ -39,7 +39,7 @@ For a WebSocket connection to be successfully initiated, the client entity must 
 
 `session_id`: An active user session token, which serves as the authentication credential for the connection.
 
-The absence of a valid session_id will result in the server's refusal of the connection.
+The absence of a valid `session_id` will result in the server's refusal of the connection.
 
 **URL format:**
 ```

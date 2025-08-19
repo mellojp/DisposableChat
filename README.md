@@ -2,11 +2,11 @@
 # Disposable Chat API
 
 A lightweight API for **anonymous, real-time conversations** in **temporary chat rooms**.  
-Built with **FastAPI** and **WebSockets**, it enables **ephemeral communication** for web, mobile, and desktop apps.  
+Built with **FastAPI** and **WebSockets**, it enables **chat communication** for web, mobile, and desktop apps.  
 
 ---
 
-## ✨ Features
+## Features
 
 - **Session-based authentication** – no permanent accounts, only temporary `session_id`.
 - **Temporary rooms** – created on demand, deleted after inactivity.
@@ -17,55 +17,29 @@ Built with **FastAPI** and **WebSockets**, it enables **ephemeral communication*
 
 ---
 
-## 🚀 Local Setup
+## API Utilization Protocol
 
-### Requirements
-- Python **3.8+**
-- `pip` + `venv`
+1. Authentication (via HTTP): It is necessary to execute a REST request to create a session, from which a session identifier `session_id` will be obtained to function as an authorization token.
 
-### 1. Clone repo
-```bash
-git clone <REPOSITORY_URL>
-cd disposable-chat
-```
+2. Room Acquisition (via HTTP): The session token must be utilized to request the creation of or entry into a chat room, resulting in the acquisition of a room identifier `room_id`.
 
-### 2. Create virtual env
-**Linux / macOS**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
+3. Connection (via WebSocket): The session and room identifiers are then employed to establish the real-time communication link.
 
-**Windows**
-```bash
-python -m venv venv
-.
-env\Scripts ctivate
-```
-
-### 3. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Run server
-```bash
-uvicorn main:app --reload
-```
-
-➡ API available at: **http://127.0.0.1:8000**
+Full API documentation avaliable in: https://disposable-chat.onrender.com/docs
 
 ---
 
-## 🔑 API Flow
+## WebSocket Connection
 
-1. **Create session (REST)** → get `session_id`  
-2. **Join or create room (REST)** → get `room_id`  
-3. **Connect via WebSocket** with `session_id` + `room_id`  
+### Preconditions for Connection Establishment
 
----
+For a WebSocket connection to be successfully initiated, the client entity must have the identifiers acquired via **API requests**:
 
-## 🌐 WebSocket Connection
+`room_id`: The unique identifier for the chat room.
+
+`session_id`: An active user session token, which serves as the authentication credential for the connection.
+
+The absence of a valid session_id will result in the server's refusal of the connection.
 
 **URL format:**
 ```
@@ -86,7 +60,7 @@ ws://127.0.0.1:8000/ws/a1b2c3d4e5?session_id=a1b2c3d4-e5f6-7890-1234-567890abcde
 
 ---
 
-## 📩 Message Format
+## Message Format
 
 Messages use **JSON**.
 
@@ -133,7 +107,7 @@ Messages use **JSON**.
 
 ---
 
-## 💻 Example Client (JS)
+## Example Client (JS)
 ```javascript
 let roomId = "a1b2c3d4e5";
 let sessionId = "a1b2c3d4-e5f6-7890-1234-567890abcdef";

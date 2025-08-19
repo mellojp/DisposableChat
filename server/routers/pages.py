@@ -7,13 +7,12 @@ from server.services.room_manager import room_manager
 router = APIRouter()
 
 # Configura o diretório de templates para este roteador
-templates = Jinja2Templates(directory="client/templates")
+templates = Jinja2Templates(directory="client")
 
 @router.get("/", response_class=HTMLResponse, tags=["Pages"])
 async def get_landing_page(request: Request):
-    """Serve a página inicial (land.html)"""
-    return templates.TemplateResponse("land.html", {"request": request})
-
+    """Serve a página inicial"""
+    return templates.TemplateResponse("index.html", {"request": request})
 @router.get("/sala/{sala_id}", response_class=HTMLResponse, tags=["Pages"])
 async def get_chat_page(request: Request, sala_id: str):
     """Serve a página de chat da sala caso exista"""

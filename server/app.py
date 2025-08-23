@@ -11,7 +11,8 @@ app = FastAPI(
 origins = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "https://mellojp.github.io/"
+    "https://mellojp.github.io",
+    "*"
 ]
 
 app.add_middleware(

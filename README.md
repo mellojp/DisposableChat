@@ -1,5 +1,5 @@
 
-# Disposable Chat API
+# Live Chat API
 
 A lightweight API for **anonymous, real-time conversations** in **temporary chat rooms**.  
 Built with **FastAPI** and **WebSockets**, it enables **chat communication** for web, mobile, and desktop apps.  

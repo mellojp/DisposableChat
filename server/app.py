@@ -11,7 +11,7 @@ app = FastAPI(
 origins = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "http://mellojp.github.io/LiveChat-Frontend"
+    "http://mellojp.github.io/LiveChat-Frontend/"
 ]
 
 app.add_middleware(

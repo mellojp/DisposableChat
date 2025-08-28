@@ -2,7 +2,8 @@
 # Disposable Chat API
 
 A lightweight API for **anonymous, real-time conversations** in **temporary chat rooms**.  
-Built with **FastAPI** and **WebSockets**, it enables **chat communication** for web, mobile, and desktop apps.  
+It allows users to quickly create sessions, join chat rooms, and exchange real-time messages without persistent storage. 
+Perfect for temporary chatrooms, testing, or small collaborative spaces.  
 
 ---
 
@@ -14,6 +15,7 @@ Built with **FastAPI** and **WebSockets**, it enables **chat communication** for
 - **Recent messages** – get the last few messages when joining a room.
 - **Typing indicators** – see when someone is typing.
 - **Cross-platform** – works with any client that supports REST + WebSockets.
+- **In memory sotorage** – disposable, no databse usage.
 
 ---
 

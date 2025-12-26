@@ -28,6 +28,10 @@ app.include_router(sessions.router)
 app.include_router(rooms.router)
 app.include_router(websocket.router)
 
-@app.api_route("/health", methods=["GET", "HEAD"], tags=["System"])
-async def health_check():
-    return Response(status_code=status.HTTP_200_OK)
+@app.get("/health", tags=["System"])
+async def health_json():
+    return {"status": "ok", "version": "2.0.0"}
+
+@app.head("/ping")
+async def ping():
+    return Response(status_code=200)

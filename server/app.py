@@ -28,7 +28,6 @@ app.include_router(sessions.router)
 app.include_router(rooms.router)
 app.include_router(websocket.router)
 
-@app.get("/health", tags=["System"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["System"])
 async def health_check():
-    """Endpoint simples para verificar se a API está no ar."""
-    return {"status": "ok", "version": "2.0.0"}
+    return Response(status_code=status.HTTP_200_OK)
